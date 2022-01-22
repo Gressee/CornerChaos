@@ -41,96 +41,17 @@ public class Player : NetworkBehaviour
         // Do nothing when dead
         if (!alive.Value) return;
 
-        //// SERVER STUFF ////
+        // Do nothing when game is paused
+        if (gameManager.IsGamePaused()) return;
 
-        if (IsHost || IsServer)
+        //// SERVER STUFF ////
+        if (IsServer)
         {   
             // MOVEMENT
-
-            // Get Inputs when Computer controlled
-            if (!IsPlayerControlled.Value)
-            {
-                dirInput.Value = GetComputerDirInput();
-                shootInput.Value = GetComputerShootInput();
-            }
-
-            // Check if at a corner
-            atCorner = false;
-            GameObject corner = null;
-            List<int> cornerDirs = new List<int>();
-            foreach (GameObject c in gameManager.GetCornerObjects())
-            {
-                float dist = Vector3.Distance(pos.Value, c.transform.position);
-                if (dist <= Mathf.Abs(speed.Value) * Time.deltaTime/1.2f)
-                {
-                    atCorner = true;
-                    corner = c;
-                    cornerDirs = corner.GetComponent<Corner>().GetPossibleDirs();
-                    break;
-                }
-                else
-                {
-                    atCorner = false;
-                }
-            }
-
-            if (atCorner)
-            {
-                // snap to corner
-                pos.Value = corner.transform.position;
-
-                if (dirInput.Value == -1)
-                {
-                    // If no input try to go straight
-                    if (cornerDirs.Contains(dir.Value))
-                    {
-                        MoveStep();
-                    } else
-                    {
-                        // Stop if not possible
-                        speed.Value = 0.0f;
-                    }
-
-                }
-                else 
-                {
-                    // Try to go to the direction and its no the opposite dir
-                    if (cornerDirs.Contains(dirInput.Value) && !utils.IsOppositeDir(dir.Value, dirInput.Value))
-                    {
-                        dir.Value = dirInput.Value;
-                        MoveStep();
-                        speed.Value *= 0.5f;  // slow down
-                    }
-                    else
-                    {
-                        // If this not possible try to go straight
-                        if (cornerDirs.Contains(dir.Value))
-                        {
-                            MoveStep();
-                        }
-                        else {
-                            // Stop
-                            speed.Value = 0.0f;
-                        }
-                    }
-                }   
-
-            }
-            else
-            {
-                MoveStep();
-            }
-            
-            UpdateSpeed();
+            HandleMovement();
 
             // SHOOTING
-            shootCooldownCount.Value -= Time.deltaTime;
-            if (shootInput.Value && shootCooldownCount.Value <= 0)
-            {
-                shootCooldownCount.Value = shootCooldown.Value;
-                speed.Value -= 20.0f;
-                gameManager.SpawnBullet(gameObject, pos.Value, dir.Value);
-            }
+            HandleShooting();
         }
 
 
@@ -142,7 +63,7 @@ public class Player : NetworkBehaviour
             UpdateInputsServerRpc(input.GetDirInput(), input.GetShootInput());
         }
 
-        // Set updated position
+        // Set updated position that comes from server
         transform.position = pos.Value;
 
         // Lerp orientation to the current dir
@@ -195,6 +116,102 @@ public class Player : NetworkBehaviour
         // TODO Some AI that is a BIT more sophisticated than this
         return (Random.Range(0, 100) < 1);
         
+    }
+
+    // Do the collisions with corner and inputs etc
+    void HandleMovement()
+    {
+        if (!IsServer) return;
+
+        // Get Inputs when Computer controlled
+        if (!IsPlayerControlled.Value)
+        {
+            dirInput.Value = GetComputerDirInput();
+            shootInput.Value = GetComputerShootInput();
+        }
+
+        // Check if at a corner
+        atCorner = false;
+        GameObject corner = null;
+        List<int> cornerDirs = new List<int>();
+        foreach (GameObject c in gameManager.GetCornerObjects())
+        {
+            float dist = Vector3.Distance(pos.Value, c.transform.position);
+            if (dist <= Mathf.Abs(speed.Value) * Time.deltaTime/1.2f)
+            {
+                atCorner = true;
+                corner = c;
+                cornerDirs = corner.GetComponent<Corner>().GetPossibleDirs();
+                break;
+            }
+            else
+            {
+                atCorner = false;
+            }
+        }
+
+        if (atCorner)
+        {
+            // snap to corner
+            pos.Value = corner.transform.position;
+
+            if (dirInput.Value == -1)
+            {
+                // If no input try to go straight
+                if (cornerDirs.Contains(dir.Value))
+                {
+                    MoveStep();
+                } else
+                {
+                    // Stop if not possible
+                    speed.Value = 0.0f;
+                }
+
+            }
+            else 
+            {
+                // Try to go to the direction and its no the opposite dir
+                if (cornerDirs.Contains(dirInput.Value) && !utils.IsOppositeDir(dir.Value, dirInput.Value))
+                {
+                    dir.Value = dirInput.Value;
+                    MoveStep();
+                    speed.Value *= 0.5f;  // slow down
+                }
+                else
+                {
+                    // If this not possible try to go straight
+                    if (cornerDirs.Contains(dir.Value))
+                    {
+                        MoveStep();
+                    }
+                    else {
+                        // Stop
+                        speed.Value = 0.0f;
+                    }
+                }
+            }   
+
+        }
+        else
+        {
+            MoveStep();
+        }
+        
+        UpdateSpeed();
+    }
+
+    // Check shoot input and cooldown etc
+    void HandleShooting()
+    {
+        if (!IsServer) return;
+
+        shootCooldownCount.Value -= Time.deltaTime;
+        if (shootInput.Value && shootCooldownCount.Value <= 0)
+        {
+            shootCooldownCount.Value = shootCooldown.Value;
+            speed.Value -= 20.0f;
+            gameManager.SpawnBullet(gameObject, pos.Value, dir.Value);
+        }
     }
 
     // Execution server side

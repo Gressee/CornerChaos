@@ -1,36 +1,54 @@
 using System.Collections;
 using System.Collections.Generic;
+using Core.Singleton;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 public class MainMenu : MonoBehaviour
 {
-    [SerializeField]
-    GameObject gameManager;
 
     [SerializeField]
-    GameObject inputGameID;
+    GameObject inputJoinCode;
 
-    // For now this is the ip address    
-    string gameID;
+    string joinCode;
 
+    void Start()
+    {
+        var input = inputJoinCode.GetComponent<TMP_InputField>();
+        Debug.Log(input);
+        input.onValueChanged.AddListener(SetJoinCode);
+    }
+
+
+    public void SetJoinCode(string joinCode)
+    {
+        this.joinCode = joinCode;
+    }
+   
     public void ButtonHost()
     {
-        gameManager.GetComponent<GameManager>().StartHost();
-        gameObject.GetComponent<UIManager>().MainMenuActive(false);
+        GameManager.Singelton.StartHost();
+        UIManager.Singelton.MainMenuActiveState(false);
+        UIManager.Singelton.MapSelectActiveState(true);
     }
 
+
     public void ButtonJoin()
-    {
-        string gameID = inputGameID.GetComponent<InputField>().text;
-        gameManager.GetComponent<GameManager>().StartJoin(gameID);
-        gameObject.GetComponent<UIManager>().MainMenuActive(false);
+    {       
+        GameManager.Singelton.StartJoin(joinCode);
+        UIManager.Singelton.MainMenuActiveState(false);
+        UIManager.Singelton.MapSelectActiveState(true);
     }
+
+    
+
 
     public void ButtonSingleplayer()
     {
-        gameManager.GetComponent<GameManager>().StartSingleplayer();
-        gameObject.GetComponent<UIManager>().MainMenuActive(false);
+        GameManager.Singelton.StartSingleplayer();
+        UIManager.Singelton.MainMenuActiveState(false);
+        UIManager.Singelton.MapSelectActiveState(true);
     }
 
 }

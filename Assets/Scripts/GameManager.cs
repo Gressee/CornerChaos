@@ -1,10 +1,11 @@
 using System.Collections;
 using System.Collections.Generic;
+using Core.Singleton;
 using UnityEngine;
 using Unity.Netcode;
 using Unity.Netcode.Transports;
 
-public class GameManager : NetworkBehaviour
+public class GameManager : NetworkSingleton<GameManager>
 {
 
     [SerializeField]
@@ -19,10 +20,16 @@ public class GameManager : NetworkBehaviour
     List<GameObject> cornerObjects = new List<GameObject>();
     List<GameObject> playerObjects = new List<GameObject>();
 
+    // Networking
+    RelayJoinData relayJoinData;
+    RelayHostData relayHostData;
+
+    // Self explainatory
+    NetworkVariable<bool> gamePaused = new NetworkVariable<bool>(true);
 
     void Start()
     {   
-        // Define Functions from NetworkManager
+        // Define Callbacks from NetworkManager
 
         NetworkManager.Singleton.OnServerStarted += () =>
         {
@@ -45,7 +52,7 @@ public class GameManager : NetworkBehaviour
                 SpawnPlayer(new Vector3(20,0,20), 2, false);
                 SpawnPlayer(new Vector3(-20,0,20), 3, false);
 
-                // When starting a host, before this method is called the 'OnClientConnectedCallback
+                // When starting a host, before this method is called, the 'OnClientConnectedCallback
                 // method is called so there are no players spawned and the client on the server side has
                 // no controll over a player
                 // This gived controll to the first player to the serverside client
@@ -106,14 +113,27 @@ public class GameManager : NetworkBehaviour
     }
 
     //// FUNCTIONS TO START THE GAME ////
-    public void StartHost()
-    {
-        NetworkManager.Singleton.StartHost();
+    public async void StartHost()
+    {   
+        if (RelayManager.Singelton.IsRelayEnabled)
+        {
+            relayHostData = await RelayManager.Singelton.SetupRelay();
+            NetworkManager.Singleton.StartHost();
+        }
+
     }
 
-    public void StartJoin(string gameID)
+    public async void StartJoin(string joinCode)
     {
-        NetworkManager.Singleton.StartClient();
+        if (RelayManager.Singelton.IsRelayEnabled && !string.IsNullOrEmpty(joinCode))
+        {
+            relayJoinData = await RelayManager.Singelton.JoinRelay(joinCode);
+            NetworkManager.Singleton.StartClient();
+        }
+        else
+        {
+            Debug.Log("Cant join maybe wrong join code");
+        }
     }
 
     public void StartSingleplayer()
@@ -178,5 +198,27 @@ public class GameManager : NetworkBehaviour
     public List<GameObject> GetCornerObjects()
     {
         return cornerObjects;
+    }
+
+    public string GetJoinCode()
+    {
+        if (!string.IsNullOrEmpty(relayHostData.JoinCode))
+        {
+            return relayHostData.JoinCode;
+        }
+        else
+        {
+            return "";
+        }
+    }
+
+    public bool IsGamePaused()
+    {
+        return gamePaused.Value;
+    }
+
+    public void SetPauseStatus(bool paused)
+    {
+        gamePaused.Value = paused;
     }
 }

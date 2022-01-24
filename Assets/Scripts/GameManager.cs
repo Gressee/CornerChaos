@@ -27,6 +27,9 @@ public class GameManager : NetworkSingleton<GameManager>
     // Self explainatory
     NetworkVariable<bool> gamePaused = new NetworkVariable<bool>(true);
 
+
+    //// STANDARD FUNCTIONS ////
+
     void Start()
     {   
         // Define Callbacks from NetworkManager
@@ -37,20 +40,21 @@ public class GameManager : NetworkSingleton<GameManager>
             {
                 Debug.Log("ServerStart");
                 // Spawn Cornes
-                SpawnCorner(new Vector3(-20,0,-20), new List<int>() {0,1});
-                SpawnCorner(new Vector3(20,0,-20), new List<int>() {1,2});
-                SpawnCorner(new Vector3(20,0,20), new List<int>() {2,3});
-                SpawnCorner(new Vector3(-20,0,20), new List<int>() {0,3});
-                SpawnCorner(new Vector3(0,0,-20), new List<int>() {0,1,2});
-                SpawnCorner(new Vector3(20,0,0), new List<int>() {1,2,3});
-                SpawnCorner(new Vector3(0,0,20), new List<int>() {0,2,3});
-                SpawnCorner(new Vector3(-20,0,0), new List<int>() {0,1,3});
+                int d = 10;
+                SpawnCorner(new Vector3(-d,0,-d), new List<int>() {0,1});
+                SpawnCorner(new Vector3(d,0,-d), new List<int>() {1,2});
+                SpawnCorner(new Vector3(d,0,d), new List<int>() {2,3});
+                SpawnCorner(new Vector3(-d,0,d), new List<int>() {0,3});
+                SpawnCorner(new Vector3(0,0,-d), new List<int>() {0,1,2});
+                SpawnCorner(new Vector3(d,0,0), new List<int>() {1,2,3});
+                SpawnCorner(new Vector3(0,0,d), new List<int>() {0,2,3});
+                SpawnCorner(new Vector3(-d,0,0), new List<int>() {0,1,3});
                 SpawnCorner(new Vector3(0,0,0), new List<int>() {0,1,2,3});
 
-                SpawnPlayer(new Vector3(-20,0,-20), 0, false);
-                SpawnPlayer(new Vector3(20,0,-20), 1, false);
-                SpawnPlayer(new Vector3(20,0,20), 2, false);
-                SpawnPlayer(new Vector3(-20,0,20), 3, false);
+                SpawnPlayer(new Vector3(-d,0,-d), 0, false);
+                SpawnPlayer(new Vector3(d,0,-d), 1, false);
+                SpawnPlayer(new Vector3(d,0,d), 2, false);
+                SpawnPlayer(new Vector3(-d,0,d), 3, false);
 
                 // When starting a host, before this method is called, the 'OnClientConnectedCallback
                 // method is called so there are no players spawned and the client on the server side has
@@ -111,6 +115,13 @@ public class GameManager : NetworkSingleton<GameManager>
 
         };
     }
+
+    void Update()
+    {
+        // Checks if game has ended and then does something with it
+        HandleGameEnd();
+    }
+
 
     //// FUNCTIONS TO START THE GAME ////
     public async void StartHost()
@@ -194,10 +205,40 @@ public class GameManager : NetworkSingleton<GameManager>
     }
 
 
+    //// END GAME ////
+
+    void HandleGameEnd()
+    {
+        int pAlive = 0;
+        foreach(GameObject p in playerObjects)
+        {
+            if (p.GetComponent<Player>().IsAlive()) pAlive ++;
+        }
+
+        // Game has ended (and the player objects have alredy spawned)
+        if (pAlive <= 1 && playerObjects.Count > 0) 
+        {
+            // Change UI
+            UIManager.Singelton.GameOverlayActiveState(false);
+            UIManager.Singelton.GameEndActiveState(true);
+            
+            // For now only pause the game
+            SetPauseStatus(true);
+            // More stuff nedded TODO
+        }
+    }
+
+
+    //// RANDOM STUFF TO SORT ////
 
     public List<GameObject> GetCornerObjects()
     {
         return cornerObjects;
+    }
+
+    public List<GameObject> GetPlayerObjects()
+    {
+        return playerObjects;
     }
 
     public string GetJoinCode()
@@ -221,4 +262,7 @@ public class GameManager : NetworkSingleton<GameManager>
     {
         gamePaused.Value = paused;
     }
+
+
+    
 }

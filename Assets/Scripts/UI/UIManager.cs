@@ -11,6 +11,15 @@ public class UIManager : Singleton<UIManager>
     [SerializeField]
     GameObject mapSelect;
 
+    [SerializeField]
+    GameObject gameOverlay;
+
+    [SerializeField]
+    GameObject gameEnd;
+
+
+    //// FUNCTIONS TO (DEACTIVATE) THE TOP LEVEL MENUS ////
+    
     public void MainMenuActiveState(bool activeState)
     {
         mainMenu.SetActive(activeState);
@@ -19,6 +28,16 @@ public class UIManager : Singleton<UIManager>
     public void MapSelectActiveState(bool activeState)
     {
         mapSelect.SetActive(activeState);
+    }
+
+    public void GameOverlayActiveState(bool activeState)
+    {
+        gameOverlay.SetActive(activeState);
+    }
+
+    public void GameEndActiveState(bool activeState)
+    {
+        gameEnd.SetActive(activeState);
     }
 
 }

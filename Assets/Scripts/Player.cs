@@ -1,12 +1,12 @@
 using System.Collections;
 using System.Collections.Generic;
+using Core.Singleton;
 using UnityEngine;
 using Unity.Netcode;
 
 public class Player : NetworkBehaviour
-{      
-    Utils utils;
-    GameManager gameManager;
+{     
+    [SerializeField]
     PlayerInputs input;
 
     // TODO Maybe not networkvariable need
@@ -31,9 +31,8 @@ public class Player : NetworkBehaviour
 
     void Start()
     {
-        utils = GetComponent<Utils>();
-        gameManager = GameObject.Find("GameManager").GetComponent<GameManager>();
         input = GetComponent<PlayerInputs>();
+
     }
 
     void Update()
@@ -42,7 +41,7 @@ public class Player : NetworkBehaviour
         if (!alive.Value) return;
 
         // Do nothing when game is paused
-        if (gameManager.IsGamePaused()) return;
+        if (GameManager.Singelton.IsGamePaused()) return;
 
         //// SERVER STUFF ////
         if (IsServer)
@@ -134,7 +133,7 @@ public class Player : NetworkBehaviour
         atCorner = false;
         GameObject corner = null;
         List<int> cornerDirs = new List<int>();
-        foreach (GameObject c in gameManager.GetCornerObjects())
+        foreach (GameObject c in GameManager.Singelton.GetCornerObjects())
         {
             float dist = Vector3.Distance(pos.Value, c.transform.position);
             if (dist <= Mathf.Abs(speed.Value) * Time.deltaTime/1.2f)
@@ -171,7 +170,7 @@ public class Player : NetworkBehaviour
             else 
             {
                 // Try to go to the direction and its no the opposite dir
-                if (cornerDirs.Contains(dirInput.Value) && !utils.IsOppositeDir(dir.Value, dirInput.Value))
+                if (cornerDirs.Contains(dirInput.Value) && !Utils.Singelton.IsOppositeDir(dir.Value, dirInput.Value))
                 {
                     dir.Value = dirInput.Value;
                     MoveStep();
@@ -210,7 +209,7 @@ public class Player : NetworkBehaviour
         {
             shootCooldownCount.Value = shootCooldown.Value;
             speed.Value -= 20.0f;
-            gameManager.SpawnBullet(gameObject, pos.Value, dir.Value);
+            GameManager.Singelton.SpawnBullet(gameObject, pos.Value, dir.Value);
         }
     }
 
@@ -260,7 +259,7 @@ public class Player : NetworkBehaviour
         if (!atCorner)
         {
             // Turn other way of not at corner
-            dir.Value = utils.ClampDir(dir.Value + 2);
+            dir.Value = Utils.Singelton.ClampDir(dir.Value + 2);
             MoveStep(); // Move so no collision on next frame
             speed.Value = 0.0f;
         }
@@ -307,5 +306,10 @@ public class Player : NetworkBehaviour
         if (IsServer){
             IsPlayerControlled.Value = playerControlled;
         }
+    }
+
+    public bool IsAlive()
+    {
+        return alive.Value;
     }
 }

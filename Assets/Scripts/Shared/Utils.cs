@@ -1,8 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
+using Core.Singleton;
 using UnityEngine;
 
-public class Utils : MonoBehaviour
+public class Utils : Singleton<Utils>
 {
     public int ClampDir(int dir)
     {

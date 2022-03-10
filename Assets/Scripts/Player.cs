@@ -37,24 +37,8 @@ public class Player : NetworkBehaviour
 
     void Update()
     {
-        // Do nothing when dead
-        if (!alive.Value) return;
-
-        // Do nothing when game is paused
-        if (GameManager.Singelton.IsGamePaused()) return;
-
-        //// SERVER STUFF ////
-        if (IsServer)
-        {   
-            // MOVEMENT
-            HandleMovement();
-
-            // SHOOTING
-            HandleShooting();
-        }
-
-
-        //// GENERAL STUFF ////
+        
+        //// EVERYTIME ////
 
         // Get new inputs to server but only for the player that this client owns
         if (IsOwner)
@@ -64,9 +48,29 @@ public class Player : NetworkBehaviour
 
         // Set updated position that comes from server
         transform.position = pos.Value;
+        Debug.Log(pos.Value);
+        
+        
+        //// ALIVE AND GAME RUNNING ////
+        //if (alive.Value && GameManager.Singelton.GetGameState() == Defines.gsGameOnPlay)
+        if (alive.Value && !GameManager.Singelton.IsGamePaused())
+        {
 
-        // Lerp orientation to the current dir
-        UpdateOrientation();
+            if (IsServer)
+            {   
+                // MOVEMENT
+                HandleMovement();
+
+                // SHOOTING
+                HandleShooting();
+            }
+
+            // Lerp orientation to the current dir
+            UpdateOrientation();
+        }
+
+
+
     }
 
     // Gets triggert on collision with player and bullet
@@ -255,6 +259,7 @@ public class Player : NetworkBehaviour
     void CollisionPlayer(Collider other)
     {
         // TODO
+        /*
         // If at corner do nothing
         if (!atCorner)
         {
@@ -262,7 +267,7 @@ public class Player : NetworkBehaviour
             dir.Value = Utils.Singelton.ClampDir(dir.Value + 2);
             MoveStep(); // Move so no collision on next frame
             speed.Value = 0.0f;
-        }
+        }*/
     }
     
     // Execution server side

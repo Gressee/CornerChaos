@@ -15,7 +15,7 @@ public class MapSelect : MonoBehaviour
 
     public void ButtonStartGame()
     {
-        
+        GameManager.Singelton.SetGameState(Defines.gsGameOnPlay);        
         GameManager.Singelton.SetPauseStatus(false);
         UIManager.Singelton.MapSelectActiveState(false);
         // Make Game overlay active

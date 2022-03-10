@@ -24,6 +24,9 @@ public class GameManager : NetworkSingleton<GameManager>
     RelayJoinData relayJoinData;
     RelayHostData relayHostData;
 
+    // The state the game in at the moment (includes MainMenu etc)
+    NetworkVariable<ushort> gameState = new NetworkVariable<ushort>(Defines.gsMainMenu);
+
     // Self explainatory
     NetworkVariable<bool> gamePaused = new NetworkVariable<bool>(true);
 
@@ -34,86 +37,11 @@ public class GameManager : NetworkSingleton<GameManager>
     {   
         // Define Callbacks from NetworkManager
 
-        NetworkManager.Singleton.OnServerStarted += () =>
-        {
-            if (IsServer)
-            {
-                Debug.Log("ServerStart");
-                // Spawn Cornes
-                int d = 10;
-                SpawnCorner(new Vector3(-d,0,-d), new List<int>() {0,1});
-                SpawnCorner(new Vector3(d,0,-d), new List<int>() {1,2});
-                SpawnCorner(new Vector3(d,0,d), new List<int>() {2,3});
-                SpawnCorner(new Vector3(-d,0,d), new List<int>() {0,3});
-                SpawnCorner(new Vector3(0,0,-d), new List<int>() {0,1,2});
-                SpawnCorner(new Vector3(d,0,0), new List<int>() {1,2,3});
-                SpawnCorner(new Vector3(0,0,d), new List<int>() {0,2,3});
-                SpawnCorner(new Vector3(-d,0,0), new List<int>() {0,1,3});
-                SpawnCorner(new Vector3(0,0,0), new List<int>() {0,1,2,3});
+        NetworkManager.Singleton.OnServerStarted += CallbackServerStarted;
 
-                SpawnPlayer(new Vector3(-d,0,-d), 0, false);
-                SpawnPlayer(new Vector3(d,0,-d), 1, false);
-                SpawnPlayer(new Vector3(d,0,d), 2, false);
-                SpawnPlayer(new Vector3(-d,0,d), 3, false);
+        NetworkManager.Singleton.OnClientConnectedCallback += CallbackClientConnected;
 
-                // When starting a host, before this method is called, the 'OnClientConnectedCallback
-                // method is called so there are no players spawned and the client on the server side has
-                // no controll over a player
-                // This gived controll to the first player to the serverside client
-                if (!playerObjects[0].GetComponent<Player>().GetPlayerControlled())
-                {
-                    // Chnaging the ownership isnt necessary bc the owner is already the serverside client
-                    playerObjects[0].GetComponent<Player>().SetPlayerControlled(true);
-                }
-
-
-            }
-        };
-
-        NetworkManager.Singleton.OnClientConnectedCallback += (clientID) =>
-        {
-            if (IsServer)
-            {
-                // Only do when players are already spawned
-                // See comment on 'NetworkManager.Singleton.OnServerStarted'
-                // on why this could happen
-                if (playerObjects.Count > 0)
-                {
-                    // Give the player the first COM player
-                    foreach (GameObject p in playerObjects)
-                    {
-                        Debug.Log(!p.GetComponent<Player>().GetPlayerControlled());
-                        if (!p.GetComponent<Player>().GetPlayerControlled())
-                        {
-                            p.GetComponent<NetworkObject>().ChangeOwnership(clientID);
-                            p.GetComponent<Player>().SetPlayerControlled(true);
-                            break;
-
-                        }
-                    }
-                }
-
-            }
-        };
-
-        NetworkManager.Singleton.OnClientDisconnectCallback += (clientID) =>
-        {
-            if (IsServer)
-            {
-                // Rese this players Ownership and controlls
-                foreach (GameObject p in playerObjects)
-                {
-                    if (p.GetComponent<NetworkObject>().OwnerClientId == clientID)
-                    {
-                        p.GetComponent<NetworkObject>().RemoveOwnership();
-                        p.GetComponent<Player>().SetPlayerControlled(false);
-                        break;
-                    }
-                }
-
-            }
-
-        };
+        NetworkManager.Singleton.OnClientDisconnectCallback += CallbackClientDisconnected;
     }
 
     void Update()
@@ -123,6 +51,88 @@ public class GameManager : NetworkSingleton<GameManager>
     }
 
 
+    //// CALLBACK FUNCTIONS FOR THE NETWORKMANAGER ////
+    void CallbackServerStarted()
+    {
+        if (IsServer)
+        {
+            Debug.Log("ServerStart");
+            // Spawn Cornes
+            int d = 10;
+            SpawnCorner(new Vector3(-d,0,-d), new List<int>() {0,1});
+            SpawnCorner(new Vector3(d,0,-d), new List<int>() {1,2});
+            SpawnCorner(new Vector3(d,0,d), new List<int>() {2,3});
+            SpawnCorner(new Vector3(-d,0,d), new List<int>() {0,3});
+            SpawnCorner(new Vector3(0,0,-d), new List<int>() {0,1,2});
+            SpawnCorner(new Vector3(d,0,0), new List<int>() {1,2,3});
+            SpawnCorner(new Vector3(0,0,d), new List<int>() {0,2,3});
+            SpawnCorner(new Vector3(-d,0,0), new List<int>() {0,1,3});
+            SpawnCorner(new Vector3(0,0,0), new List<int>() {0,1,2,3});
+
+            SpawnPlayer(new Vector3(-d,0,-d), 0, false);
+            SpawnPlayer(new Vector3(d,0,-d), 1, false);
+            SpawnPlayer(new Vector3(d,0,d), 2, false);
+            SpawnPlayer(new Vector3(-d,0,d), 3, false);
+
+            // When starting a host, before this method is called, the 'OnClientConnectedCallback
+            // method is called so there are no players spawned and the client on the server side has
+            // no controll over a player
+            // This gived controll to the first player to the serverside client
+            if (!playerObjects[0].GetComponent<Player>().GetPlayerControlled())
+            {
+                // Chnaging the ownership isnt necessary bc the owner is already the serverside client
+                playerObjects[0].GetComponent<Player>().SetPlayerControlled(true);
+            }
+
+
+        }
+    }
+
+    void CallbackClientConnected(ulong clientID)
+    {
+        if (IsServer)
+        {
+            // Only do when players are already spawned
+            // See comment on 'NetworkManager.Singleton.OnServerStarted'
+            // on why this could happen
+            if (playerObjects.Count > 0)
+            {
+                // Give the player the first COM player
+                foreach (GameObject p in playerObjects)
+                {
+                    Debug.Log(!p.GetComponent<Player>().GetPlayerControlled());
+                    if (!p.GetComponent<Player>().GetPlayerControlled())
+                    {
+                        p.GetComponent<NetworkObject>().ChangeOwnership(clientID);
+                        p.GetComponent<Player>().SetPlayerControlled(true);
+                        break;
+
+                    }
+                }
+            }
+
+        }
+    }
+
+    void CallbackClientDisconnected(ulong clientID)
+    {
+        if (IsServer)
+        {
+            // Rese this players Ownership and controlls
+            foreach (GameObject p in playerObjects)
+            {
+                if (p.GetComponent<NetworkObject>().OwnerClientId == clientID)
+                {
+                    p.GetComponent<NetworkObject>().RemoveOwnership();
+                    p.GetComponent<Player>().SetPlayerControlled(false);
+                    break;
+                }
+            }
+
+        }
+    }
+    
+    
     //// FUNCTIONS TO START THE GAME ////
     public async void StartHost()
     {   
@@ -263,6 +273,23 @@ public class GameManager : NetworkSingleton<GameManager>
         gamePaused.Value = paused;
     }
 
+    public ushort GetGameState()
+    {
+        return gameState.Value;
+    }
 
+    public bool SetGameState(ushort state)
+    {
+        // Returns if change was succesfull
+        if (IsServer)
+        {
+            gameState.Value = state;
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
     
 }
